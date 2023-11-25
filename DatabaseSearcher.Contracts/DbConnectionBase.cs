@@ -12,23 +12,14 @@ public abstract class DbConnectionBase : IDisposable, IAsyncDisposable
 {
     private readonly DbConnection _connection;
     private readonly bool _disposeConnection;
-    private bool disposed;
 
     public string ConnectionString => _connection.ConnectionString;
 
     public string DatabaseName => _connection.Database;
 
-    public bool Connected { get; private set; }
+    public bool Connected => _connection.State == ConnectionState.Open;
 
-    public bool Disposed
-    {
-        get => disposed;
-        set
-        {
-            disposed = value;
-            Connected = false;
-        }
-    }
+    public bool Disposed { get; private set; }
 
     public DbConnectionBase(DbConnection connection)
         : this (connection, true)
@@ -44,17 +35,16 @@ public abstract class DbConnectionBase : IDisposable, IAsyncDisposable
     public virtual async Task Connect(CancellationToken cancellationToken)
     {
         await _connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-        Connected = true;
     }
 
     public virtual async Task Disconnect()
     {
         await _connection.CloseAsync().ConfigureAwait(false);
-        Connected = false;
     }
 
     public virtual async Task<DbDataReader> GetReader(string query, ICollection<(string name, object value)>? parameters, CancellationToken cancellationToken)
     {
+        await Prepare(cancellationToken).ConfigureAwait(false);
         using var command = CreateCommand(query, parameters);
         var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         return reader;
@@ -62,6 +52,7 @@ public abstract class DbConnectionBase : IDisposable, IAsyncDisposable
 
     public virtual async Task<object?> GetScalar(string query, ICollection<(string name, object value)>? parameters, CancellationToken cancellationToken)
     {
+        await Prepare(cancellationToken).ConfigureAwait(false);
         using var command = CreateCommand(query, parameters);
         var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         return value;
@@ -86,6 +77,14 @@ public abstract class DbConnectionBase : IDisposable, IAsyncDisposable
         }
 
         return command;
+    }
+
+    protected async Task Prepare(CancellationToken cancellationToken)
+    {
+        if (!Connected)
+        {
+            await this.Connect(cancellationToken);
+        }
     }
 
     #endregion

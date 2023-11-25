@@ -1,5 +1,6 @@
 ﻿using DatabaseSearcher.App.Dto;
 using DatabaseSearcher.App.Helpers;
+using SqlSearcher = SQLServerSearcher.SQLServerSearcher;
 using System.DirectoryServices;
 using System.Text;
 using System.Windows;
@@ -11,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using DatabaseSearcher.Dto.Status;
 
 namespace DatabaseSearcher.App
 {
@@ -44,6 +46,62 @@ namespace DatabaseSearcher.App
             {
                 previousConnectionString = Txt_ConnectionString.Text;
                 await SaveConfigurations();
+            }
+        }
+
+        private async void Btn_Search_Click(object sender, RoutedEventArgs e)
+        {
+            SqlSearcher searcher = new (Txt_ConnectionString.Text);
+            try
+            {
+                Btn_Search.IsEnabled = false;
+                Btn_Stop.IsEnabled = true;
+                Txt_Logs.Text = "";
+                Txt_Result.Text = "";
+
+                string activeTableName = string.Empty;
+                bool isFirstTimeReporting = true;
+
+                var progressReporter = new Progress<Status>(st =>
+                {
+                    Pb_Status.Value = Math.Ceiling(st.PercentageProcessed);
+
+                    if (isFirstTimeReporting)
+                    {
+                        Txt_Logs.Text += $"Total {st.TotalTablesStatus.Total} tables to search.";
+                        isFirstTimeReporting = false;
+                    }
+
+                    if (!string.Equals(activeTableName, st.ActiveTableStatus.TableName))
+                    {
+                        activeTableName = st.ActiveTableStatus.TableName;
+                        Tb_Status.Text = $"Searching in {st.ActiveTableStatus.TableName}";
+                        Txt_Logs.Text += $"Searching in {st.ActiveTableStatus.TableName}. (Total {st.ActiveTableStatus.TotalRows} rows.){Environment.NewLine}{st.TotalTablesStatus.Total - st.TotalTablesStatus.Processed} tables reamining.{Environment.NewLine}";
+                    }
+                    else
+                    {
+                        if (st.ActiveTableStatus.RowsProcessed % 5000 == 0)
+                        {
+                            Txt_Logs.Text += $"{st.ActiveTableStatus.TotalRows - st.ActiveTableStatus.RowsProcessed} rows left.";
+                        }
+                    }
+                });
+
+                await foreach (var (table, column, rowNumber) in searcher.Search(Txt_SearchText.Text, progressReporter, CancellationToken.None))
+                {
+                    Txt_Result.Text += $"Found a match in {table} table inside column {column} at row number {rowNumber}.{Environment.NewLine}";
+                }
+            }
+            catch (Exception ex)
+            {
+                HandleError(ex);
+            }
+            finally
+            {
+                await searcher.DisposeAsync();
+
+                Btn_Search.IsEnabled = true;
+                Btn_Stop.IsEnabled = false;
             }
         }
 

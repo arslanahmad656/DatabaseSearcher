@@ -16,14 +16,12 @@ namespace SQLServerSearcher;
 public class SQLServerSearcher : IDbSearcher, IDisposable, IAsyncDisposable
 {
     private readonly SQLServerConnector _connector;
-    private readonly string _databaseName;
 
     public bool Disposed { get; private set; }
 
-    public SQLServerSearcher(string connectionString, string databaseName)
+    public SQLServerSearcher(string connectionString)
     {
         _connector = new(connectionString);
-        _databaseName = databaseName;
     }
 
     public async IAsyncEnumerable<SearchResult> Search(string text, IProgress<Status>? progress, [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -49,11 +47,11 @@ public class SQLServerSearcher : IDbSearcher, IDisposable, IAsyncDisposable
             cancellationToken.ThrowIfCancellationRequested();
 
             var tableQuery = $"SELECT * FROM {table}";
-            var reader = await _connector.GetReader(tableQuery, null, cancellationToken).ConfigureAwait(false);
+            using var reader = await _connector.GetReader(tableQuery, null, cancellationToken).ConfigureAwait(false);
 
             var progressReporter = new Progress<int>(currentTableRowsProcessed =>
             {
-                progress?.Report(new((double)i / tables.Count, new(tables.Count, currentTableRowsProcessed), new(table, totalRows, currentTableRowsProcessed)));
+                progress?.Report(new((double)i / tables.Count * 100, new(tables.Count, i + 1), new(table, totalRows, currentTableRowsProcessed)));
             });
 
             await foreach (var tableData in reader.ReadTableRows(progressReporter, cancellationToken).ConfigureAwait(false))
