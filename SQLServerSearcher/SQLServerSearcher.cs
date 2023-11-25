@@ -41,12 +41,12 @@ public class SQLServerSearcher : IDbSearcher, IDisposable, IAsyncDisposable
             var table = tables.ElementAt(i);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var countQuery = $"SELECT COUNT(*) FROM {table}";
+            var countQuery = $"SELECT COUNT(*) FROM \"{table}\"";
             var totalRows = Convert.ToInt32(await _connector.GetScalar(countQuery, null, cancellationToken).ConfigureAwait(false));
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            var tableQuery = $"SELECT * FROM {table}";
+            var tableQuery = $"SELECT * FROM \"{table}\"";
             using var reader = await _connector.GetReader(tableQuery, null, cancellationToken).ConfigureAwait(false);
 
             var progressReporter = new Progress<int>(currentTableRowsProcessed =>

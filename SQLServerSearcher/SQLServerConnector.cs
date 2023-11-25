@@ -22,11 +22,10 @@ public class SQLServerConnector : DbConnectionBase
     public override async Task<List<string>> GetTableNames(CancellationToken cancellationToken)
     {
         await Prepare(cancellationToken).ConfigureAwait(false);
-        var query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = @tabletype AND TABLE_CATALOG=@db";
+        var query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG=@db";   // all tables and views
 
         var parameters = new List<(string name, object value)>
         {
-            ("tabletype", "BASE TABLE"),
             ("db", this.DatabaseName)
         };
 
