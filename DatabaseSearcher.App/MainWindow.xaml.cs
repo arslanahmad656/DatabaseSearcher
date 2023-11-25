@@ -22,6 +22,7 @@ namespace DatabaseSearcher.App
     public partial class MainWindow : Window
     {
         private string? previousConnectionString;
+        private CancellationTokenSource? cancellationToken;
 
         public MainWindow()
         {
@@ -38,6 +39,7 @@ namespace DatabaseSearcher.App
         private async void Window_Main_Loaded(object sender, RoutedEventArgs e)
         {
             await LoadConfigurations();
+            Btn_Search.IsEnabled = !string.IsNullOrWhiteSpace(Txt_SearchText.Text);
         }
 
         private async void Txt_ConnectionString_LostFocus(object sender, RoutedEventArgs e)
@@ -46,6 +48,20 @@ namespace DatabaseSearcher.App
             {
                 previousConnectionString = Txt_ConnectionString.Text;
                 await SaveConfigurations();
+            }
+        }
+
+        private void Txt_SearchText_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            Btn_Search.IsEnabled = !string.IsNullOrWhiteSpace(Txt_SearchText.Text);
+        }
+
+        private void Btn_Stop_Click(object sender, RoutedEventArgs e)
+        {
+            if (cancellationToken is not null)
+            {
+                Btn_Stop.IsEnabled = false;
+                cancellationToken.Cancel();
             }
         }
 
@@ -87,10 +103,15 @@ namespace DatabaseSearcher.App
                     }
                 });
 
-                await foreach (var (table, column, rowNumber) in searcher.Search(Txt_SearchText.Text, progressReporter, CancellationToken.None))
+                cancellationToken = new();
+                await foreach (var (table, column, rowNumber) in searcher.Search(Txt_SearchText.Text, progressReporter, cancellationToken.Token))
                 {
                     Txt_Result.Text += $"Found a match in {table} table inside column {column} at row number {rowNumber}.{Environment.NewLine}";
                 }
+            }
+            catch(OperationCanceledException)
+            {
+                MessageBox.Show("Search has been cancelled.", "Search Cancelled", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
@@ -102,6 +123,8 @@ namespace DatabaseSearcher.App
 
                 Btn_Search.IsEnabled = true;
                 Btn_Stop.IsEnabled = false;
+
+                cancellationToken = null;
             }
         }
 
