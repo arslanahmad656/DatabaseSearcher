@@ -54,12 +54,14 @@ public class SQLServerSearcher : IDbSearcher, IDisposable, IAsyncDisposable
                 progress?.Report(new((double)i / tables.Count * 100, new(tables.Count, i + 1), new(table, totalRows, currentTableRowsProcessed)));
             });
 
-            await foreach (var tableData in reader.ReadTableRows(progressReporter, cancellationToken).ConfigureAwait(false))
+            int rowCount = 0;
+            await foreach (var rowData in reader.ReadTableRows(progressReporter, cancellationToken).ConfigureAwait(false))
             {
-                for (int rowCount = 0; rowCount < tableData.Keys.Count; rowCount++)
+                rowCount++;
+                for (int colCount = 0; colCount < rowData.Keys.Count; colCount++)
                 {
-                    var key = tableData.Keys.ElementAt(rowCount);
-                    var value = tableData[key];
+                    var key = rowData.Keys.ElementAt(colCount);
+                    var value = rowData[key];
                     var columnText = value?.ToString();
                     if (IsMatch(text, columnText))
                     {
