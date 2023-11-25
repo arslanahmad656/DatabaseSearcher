@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseSearcher.Dto", "Dat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseSearcher.Contracts", "DatabaseSearcher.Contracts\DatabaseSearcher.Contracts.csproj", "{78EA2E00-7D7F-488F-A3BB-C928678BE028}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseSearcher.App", "DatabaseSearcher.App\DatabaseSearcher.App.csproj", "{BF48C1D4-B573-4830-9E2C-1E9D5C5C42CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{78EA2E00-7D7F-488F-A3BB-C928678BE028}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78EA2E00-7D7F-488F-A3BB-C928678BE028}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78EA2E00-7D7F-488F-A3BB-C928678BE028}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF48C1D4-B573-4830-9E2C-1E9D5C5C42CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF48C1D4-B573-4830-9E2C-1E9D5C5C42CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF48C1D4-B573-4830-9E2C-1E9D5C5C42CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF48C1D4-B573-4830-9E2C-1E9D5C5C42CE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
