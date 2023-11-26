@@ -22,7 +22,7 @@ public abstract class DbConnectionBase : IDisposable, IAsyncDisposable
     public bool Disposed { get; private set; }
 
     public DbConnectionBase(DbConnection connection)
-        : this (connection, true)
+        : this(connection, true)
     {
     }
 
@@ -58,7 +58,7 @@ public abstract class DbConnectionBase : IDisposable, IAsyncDisposable
         return value;
     }
 
-    public abstract Task<List<string>> GetTableNames(CancellationToken cancellationToken);
+    public abstract Task<List<(string tableName, string tableSchema)>> GetTableNames(CancellationToken cancellationToken);
 
     #region Helpers
 
