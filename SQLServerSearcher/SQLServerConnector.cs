@@ -14,15 +14,15 @@ public class SQLServerConnector : DbConnectionBase
 {
 
     public SQLServerConnector(string connectionString)
-        : base (new SqlConnection(connectionString))
+        : base(new SqlConnection(connectionString))
     {
-        
+
     }
 
-    public override async Task<List<string>> GetTableNames(CancellationToken cancellationToken)
+    public override async Task<List<(string tableName, string tableSchema)>> GetTableNames(CancellationToken cancellationToken)
     {
         await Prepare(cancellationToken).ConfigureAwait(false);
-        var query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG=@db";   // all tables and views
+        var query = "SELECT TABLE_NAME, TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_CATALOG=@db";   // all tables and views
 
         var parameters = new List<(string name, object value)>
         {
@@ -31,12 +31,12 @@ public class SQLServerConnector : DbConnectionBase
 
         using var reader = await this.GetReader(query, parameters, cancellationToken).ConfigureAwait(false);
         var rows = new List<Dictionary<string, object>>();
-        await foreach (var row in DatabaseExtensions.ReadTableRows(reader, null, cancellationToken).ConfigureAwait(false))
+        await foreach (var row in reader.ReadTableRows(null, cancellationToken).ConfigureAwait(false))
         {
             rows.Add(row);
         }
 
-        var tableNames = rows.Select(r => r["TABLE_NAME"]?.ToString() ?? string.Empty).ToList();
+        var tableNames = rows.Select(r => (r["TABLE_NAME"]?.ToString() ?? string.Empty, r["TABLE_SCHEMA"]?.ToString() ?? string.Empty)).ToList();
         return tableNames;
     }
 }

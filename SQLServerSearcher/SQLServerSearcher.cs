@@ -27,8 +27,9 @@ public class SQLServerSearcher : IDbSearcher, IDisposable, IAsyncDisposable
     public async IAsyncEnumerable<SearchResult> Search(string text, IProgress<Status>? progress, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var tableNames = await _connector.GetTableNames(cancellationToken).ConfigureAwait(false);
+        var fullTableNames = tableNames.Select(ns => $"[{ns.tableSchema}].[{ns.tableName}]").ToList();
 
-        await foreach (var result in Search(text, tableNames, progress, cancellationToken))
+        await foreach (var result in Search(text, fullTableNames, progress, cancellationToken))
         {
             yield return result;
         }
@@ -41,12 +42,12 @@ public class SQLServerSearcher : IDbSearcher, IDisposable, IAsyncDisposable
             var table = tables.ElementAt(i);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var countQuery = $"SELECT COUNT(*) FROM \"{table}\"";
+            var countQuery = $"SELECT COUNT(*) FROM {table}";
             var totalRows = Convert.ToInt32(await _connector.GetScalar(countQuery, null, cancellationToken).ConfigureAwait(false));
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            var tableQuery = $"SELECT * FROM \"{table}\"";
+            var tableQuery = $"SELECT * FROM {table}";
             using var reader = await _connector.GetReader(tableQuery, null, cancellationToken).ConfigureAwait(false);
 
             var progressReporter = new Progress<int>(currentTableRowsProcessed =>
@@ -65,7 +66,7 @@ public class SQLServerSearcher : IDbSearcher, IDisposable, IAsyncDisposable
                     var columnText = value?.ToString();
                     if (IsMatch(text, columnText))
                     {
-                        yield return new (table, key, rowCount);
+                        yield return new(table, key, rowCount);
                     }
                 }
             }
