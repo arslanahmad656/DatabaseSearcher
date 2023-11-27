@@ -98,7 +98,7 @@ namespace DatabaseSearcher.App
                     {
                         if (st.ActiveTableStatus.RowsProcessed % 5000 == 0)
                         {
-                            Txt_Logs.Text += $"{st.ActiveTableStatus.TotalRows - st.ActiveTableStatus.RowsProcessed} rows left.";
+                            Txt_Logs.Text += $"{st.ActiveTableStatus.TotalRows - st.ActiveTableStatus.RowsProcessed} rows left.{Environment.NewLine}";
                         }
                     }
                 });
