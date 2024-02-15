@@ -41,7 +41,7 @@ public class SQLServerSearcher(string connectionString) : IDbSearcher, IDisposab
 
     public async IAsyncEnumerable<SearchResult> SearchColumns(string text, IProgress<Status> progress, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var fullTableNames = await DbHelper.GetTableNames(_connector, true, cancellationToken).ConfigureAwait(false);
+        var fullTableNames = await DbHelper.GetTableNames(_connector, false, cancellationToken).ConfigureAwait(false);
         await foreach (var result in SearchColumns(text, fullTableNames, progress, cancellationToken).ConfigureAwait(false))
         {
             yield return result;
@@ -136,12 +136,12 @@ file static class DbHelper
             cancellationToken.ThrowIfCancellationRequested();
 
             var countQuery = tableInfo.countQuery;
-            var totalRows = Convert.ToInt32(await connector.GetScalar(countQuery, null, cancellationToken).ConfigureAwait(false));
+            var totalRows = Convert.ToInt32(await connector.GetScalar(countQuery, tableInfo.parameters, cancellationToken).ConfigureAwait(false));
 
             cancellationToken.ThrowIfCancellationRequested();
 
             var tableQuery = tableInfo.tableQuery;
-            using var reader = await connector.GetReader(tableQuery, null, cancellationToken).ConfigureAwait(false);
+            using var reader = await connector.GetReader(tableQuery, tableInfo.parameters, cancellationToken).ConfigureAwait(false);
 
             var progressReporter = new Progress<int>(currentTableRowsProcessed =>
             {

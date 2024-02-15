@@ -36,6 +36,7 @@
         
         <WrapPanel Grid.Column="1" Grid.Row="3" FlowDirection="RightToLeft" VerticalAlignment="Center">
             <Button Name="Btn_Search" Height="30" Width="60" Margin="0 0 5 0" Click="Btn_Search_Click">Searh</Button>
+            <Button Name="Btn_SearchColumns" Height="30" Width="100" Margin="0 0 5 0" Click="Btn_SearchColumns_Click">Search Columns</Button>
             <Button Name="Btn_Stop" Height="30" Width="60" IsEnabled="False" Click="Btn_Stop_Click">Stop</Button>
         </WrapPanel>
 
@@ -46,6 +47,6 @@
         <ProgressBar Name="Pb_Status" Minimum="0" Maximum="100" Value="0" Grid.ColumnSpan="2" Grid.Row="6" VerticalAlignment="Center" Height="30"></ProgressBar>
         <TextBlock Text="{Binding ElementName=Pb_Status, Path=Value, StringFormat={}{0:0}%}" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.ColumnSpan="2" Grid.Row="6" Foreground="White"></TextBlock>
 
-        <TextBlock Name="Tb_Status" Grid.ColumnSpan="2" Grid.Row="7" Height="30"  FontSize="10" FontStyle="Italic" Foreground="#B2000000">ddd</TextBlock>
+        <TextBlock Name="Tb_Status" Grid.ColumnSpan="2" Grid.Row="7" Height="30"  FontSize="10" FontStyle="Italic" Foreground="#B2000000"></TextBlock>
     </Grid>
 </Window>
