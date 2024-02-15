@@ -9,7 +9,7 @@ public interface IDbSearcher
 
     IAsyncEnumerable<SearchResult> Search(string text, ICollection<string> tables, IProgress<Status> progress, CancellationToken cancellationToken);
 
-    IAsyncEnumerable<SearchResult> SearchColumns(string text, IProgress<Status> progress, CancellationToken cancellationToken);
+    //IAsyncEnumerable<SearchResult> SearchColumns(string text, IProgress<Status> progress, CancellationToken cancellationToken);
 
-    IAsyncEnumerable<SearchResult> SearchColumns(string text, ICollection<string> tables, IProgress<Status> progress, CancellationToken cancellationToken);
+    //IAsyncEnumerable<SearchResult> SearchColumns(string text, ICollection<string> tables, IProgress<Status> progress, CancellationToken cancellationToken);
 }
