@@ -32,7 +32,32 @@ public class SQLServerSearcher(string connectionString) : IDbSearcher, IDisposab
 
     public async IAsyncEnumerable<SearchResult> Search(string text, ICollection<string> tables, IProgress<Status>? progress, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var queries = tables.Select(t => ($"SELECT COUNT(*) FROM {t}", $"SELECT * FROM {t}", t)).ToList();
+        var queries = tables.Select(t => ($"SELECT COUNT(*) FROM {t}", $"SELECT * FROM {t}", t, (ICollection<(string, object)>?)null)).ToList();
+        await foreach (var result in DbHelper.Search(_connector, text, queries, progress, cancellationToken).ConfigureAwait(false))
+        {
+            yield return result;
+        }
+    }
+
+    public async IAsyncEnumerable<SearchResult> SearchColumns(string text, IProgress<Status> progress, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var fullTableNames = await DbHelper.GetTableNames(_connector, true, cancellationToken).ConfigureAwait(false);
+        await foreach (var result in SearchColumns(text, fullTableNames, progress, cancellationToken).ConfigureAwait(false))
+        {
+            yield return result;
+        }
+    }
+
+    public async IAsyncEnumerable<SearchResult> SearchColumns(string text, ICollection<string> tables, IProgress<Status> progress, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var queries = tables.Select(t =>
+            (
+            "SELECT Count(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @param1",
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @param1",
+            $"INFORMATION_SCHEMA.COLUMNS for {t}",
+            (ICollection<(string, object)>?)[("@param1", t)]
+            )).ToList();
+
         await foreach (var result in DbHelper.Search(_connector, text, queries, progress, cancellationToken).ConfigureAwait(false))
         {
             yield return result;
@@ -102,7 +127,7 @@ file static class DbHelper
         return tableNames;
     }
 
-    public static async IAsyncEnumerable<SearchResult> Search(SQLServerConnector connector, string text, ICollection<(string countQuery, string tableQuery, string tableName)> tables, IProgress<Status>? progress, [EnumeratorCancellation] CancellationToken cancellationToken)
+    public static async IAsyncEnumerable<SearchResult> Search(SQLServerConnector connector, string text, ICollection<(string countQuery, string tableQuery, string tableName, ICollection<(string name, object value)>? parameters)> tables, IProgress<Status>? progress, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         for (int i = 0; i < tables.Count; i++)
         {
@@ -123,7 +148,7 @@ file static class DbHelper
                 progress?.Report(new((double)i / tables.Count * 100, new(tables.Count, i + 1), new(table, totalRows, currentTableRowsProcessed)));
             });
 
-            await foreach (var cellLocation in Search(connector, text, tableQuery, progressReporter, cancellationToken).ConfigureAwait(false))
+            await foreach (var cellLocation in Search(connector, text, tableQuery, tableInfo.parameters, progressReporter, cancellationToken).ConfigureAwait(false))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 yield return new(table, cellLocation);
@@ -131,9 +156,9 @@ file static class DbHelper
         }
     }
 
-    private static async IAsyncEnumerable<CellLocation> Search(SQLServerConnector connector, string text, string tableQuery, IProgress<int> progressReporter, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private static async IAsyncEnumerable<CellLocation> Search(SQLServerConnector connector, string text, string tableQuery, ICollection<(string name, object value)>? parameters, IProgress<int> progressReporter, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        using var reader = await connector.GetReader(tableQuery, null, cancellationToken).ConfigureAwait(false);
+        using var reader = await connector.GetReader(tableQuery, parameters, cancellationToken).ConfigureAwait(false);
 
         int rowCount = 0;
         await foreach (var rowData in reader.ReadTableRows(progressReporter, cancellationToken).ConfigureAwait(false))
