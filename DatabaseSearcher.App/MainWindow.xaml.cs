@@ -1,7 +1,6 @@
 ﻿using DatabaseSearcher.App.Dto;
 using DatabaseSearcher.App.Helpers;
 using SqlSearcher = SQLServerSearcher.SQLServerSearcher;
-using System.DirectoryServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using DatabaseSearcher.Dto.Status;
+using DatabaseSearcher.Dto;
 
 namespace DatabaseSearcher.App
 {
@@ -40,6 +40,7 @@ namespace DatabaseSearcher.App
         {
             await LoadConfigurations();
             Btn_Search.IsEnabled = !string.IsNullOrWhiteSpace(Txt_SearchText.Text);
+            Btn_SearchColumns.IsEnabled = Btn_Search.IsEnabled;
         }
 
         private async void Txt_ConnectionString_LostFocus(object sender, RoutedEventArgs e)
@@ -54,6 +55,7 @@ namespace DatabaseSearcher.App
         private void Txt_SearchText_TextChanged(object sender, TextChangedEventArgs e)
         {
             Btn_Search.IsEnabled = !string.IsNullOrWhiteSpace(Txt_SearchText.Text);
+            Btn_SearchColumns.IsEnabled = Btn_Search.IsEnabled;
         }
 
         private void Btn_Stop_Click(object sender, RoutedEventArgs e)
@@ -65,12 +67,40 @@ namespace DatabaseSearcher.App
             }
         }
 
-        private async void Btn_Search_Click(object sender, RoutedEventArgs e)
+        private async void Btn_SearchColumns_Click(object sender, RoutedEventArgs e) => await SearchClicked(SearchType.Columns);
+
+        private async void Btn_Search_Click(object sender, RoutedEventArgs e) => await SearchClicked(SearchType.Rows);
+
+        #region Helpers
+
+        private async Task LoadConfigurations()
         {
-            SqlSearcher searcher = new (Txt_ConnectionString.Text);
+            var configs = await ConfigHelper.LoadConfigurations();
+            if (configs is not null)
+            {
+                Txt_ConnectionString.Text = configs.ConnectionString;
+                previousConnectionString = configs.ConnectionString;
+            }
+        }
+
+        private async Task SaveConfigurations()
+        {
+            var configs = new SavedConfiguration(Txt_ConnectionString.Text);
+            await ConfigHelper.SaveConfigurations(configs);
+        }
+
+        private void HandleError(Exception ex)
+        {
+            MessageBox.Show(ex.Message, ex.GetType().FullName, MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        private async Task SearchClicked(SearchType searchType)
+        {
+            SqlSearcher searcher = new(Txt_ConnectionString.Text);
             try
             {
                 Btn_Search.IsEnabled = false;
+                Btn_SearchColumns.IsEnabled = false;
                 Btn_Stop.IsEnabled = true;
                 Txt_Logs.Text = "";
                 Txt_Result.Text = "";
@@ -104,12 +134,13 @@ namespace DatabaseSearcher.App
                 });
 
                 cancellationToken = new();
-                await foreach (var (table, column, rowNumber) in searcher.Search(Txt_SearchText.Text, progressReporter, cancellationToken.Token))
+                var searcherMethod = GetSearcherMethod(searcher, searchType);
+                await foreach (var (table, column, rowNumber) in searcherMethod(Txt_SearchText.Text, progressReporter, cancellationToken.Token))
                 {
                     Txt_Result.Text += $"Found a match in {table} table inside column {column} at row number {rowNumber}.{Environment.NewLine}";
                 }
             }
-            catch(OperationCanceledException)
+            catch (OperationCanceledException)
             {
                 MessageBox.Show("Search has been cancelled.", "Search Cancelled", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -122,33 +153,19 @@ namespace DatabaseSearcher.App
                 await searcher.DisposeAsync();
 
                 Btn_Search.IsEnabled = true;
+                Btn_SearchColumns.IsEnabled = true;
                 Btn_Stop.IsEnabled = false;
 
                 cancellationToken = null;
             }
-        }
 
-        #region Helpers
-
-        private async Task LoadConfigurations()
-        {
-            var configs = await ConfigHelper.LoadConfigurations();
-            if (configs is not null)
-            {
-                Txt_ConnectionString.Text = configs.ConnectionString;
-                previousConnectionString = configs.ConnectionString;
-            }
-        }
-
-        private async Task SaveConfigurations()
-        {
-            var configs = new SavedConfiguration(Txt_ConnectionString.Text);
-            await ConfigHelper.SaveConfigurations(configs);
-        }
-
-        private void HandleError(Exception ex)
-        {
-            MessageBox.Show(ex.Message, ex.GetType().FullName, MessageBoxButton.OK, MessageBoxImage.Error);
+            static Func<string, IProgress<Status>, CancellationToken, IAsyncEnumerable<SearchResult>> GetSearcherMethod(SqlSearcher searcher, SearchType searchType)
+                => searchType switch
+                {
+                    SearchType.Rows => searcher.Search,
+                    SearchType.Columns => searcher.SearchColumns,
+                    _ => throw new ArgumentOutOfRangeException(nameof(searchType))
+                };
         }
 
         #endregion
